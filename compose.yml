@@ -1,0 +1,54 @@
+version: "3.8"
+
+networks:
+  app-network:
+    driver: bridge
+
+services:
+  mysql-db:
+    image: mysql:8.0
+    container_name: mysql-db
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_DATABASE: mydatabase
+      MYSQL_USER: myuser
+      MYSQL_PASSWORD: mypassword
+    ports:
+      - "3306:3306"
+    networks:
+      - app-network
+    volumes:
+      - mysql_data:/var/lib/mysql
+
+  docker-spring:
+    build: ./docker-spring
+    container_name: spring-boot-backend
+    restart: always
+    depends_on:
+      - mysql-db
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql-db:3306/mydatabase
+      SPRING_DATASOURCE_USERNAME: myuser
+      SPRING_DATASOURCE_PASSWORD: mypassword
+      SPRING_JPA_HIBERNATE_DDL_AUTO: update
+    ports:
+      - "8080:8080"
+    networks:
+      - app-network
+
+  my-app:
+    build: ./my-app
+    container_name: react-frontend
+    restart: always
+    depends_on:
+      - docker-spring
+    environment:
+      REACT_APP_BACKEND_URL: http://docker-spring:8080
+    ports:
+      - "3000:3000"
+    networks:
+      - app-network
+
+volumes:
+  mysql_data:
